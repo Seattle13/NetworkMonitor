@@ -1,6 +1,6 @@
 # Network Scanner and Monitoring System
 
-A sophisticated network monitoring solution that scans local Wi-Fi networks, collects device information, stores it in a structured database, and presents it through a web-based dashboard. The system includes real-time alerting capabilities for new device detection.
+A network monitoring solution that scans local Wi-Fi networks, collects device information, stores it in a structured database, and presents it through a web-based dashboard. The system includes real-time alerting capabilities for new device detection.
 
 ## Features
 
@@ -145,7 +145,7 @@ Common issues and solutions:
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License.
 
 ## Acknowledgments
 
