@@ -24,8 +24,8 @@ A network monitoring solution that scans local Wi-Fi networks, collects device i
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
-cd network-scanner
+git clone https://github.com/Seattle13/NetworkMonitor
+cd NetworkMonitor
 ```
 
 2. Create and activate a virtual environment:
@@ -44,11 +44,11 @@ pip install -r requirements.txt
 
 4. Configure the application:
    - Copy `config.py.example` to `config.py`
-   - Update the configuration settings in `config.py`
+   - Update the configuration settings in `.env`
 
 ## Configuration
 
-The system can be configured through `config.py`. Key settings include:
+The system can be configured through `.env`. Key settings include:
 
 - Network CIDR range to scan
 - Scan interval
@@ -70,7 +70,7 @@ python -c "from app import app, db; app.app_context().push(); db.create_all()"
 python app.py
 ```
 
-The dashboard will be available at `http://localhost:5000`
+The dashboard will be available at `http://localhost:8080`
 
 ### Running as a Service
 
@@ -134,14 +134,6 @@ Common issues and solutions:
 3. **Email Alert Issues**
    - Verify SMTP server settings
    - Check email credentials
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
 
 ## License
 
