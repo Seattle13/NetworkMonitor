@@ -1,10 +1,10 @@
 from flask import Flask, render_template, jsonify
-from database import db, Host, Port, Vendor, Service, MACHistory
+from database import db, Host, Port, Vendor, Service, MACHistory, ChangeHistory
 from apscheduler.schedulers.background import BackgroundScheduler
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 from main import scan_network_and_collect_data, nm
-from email_utils import send_alert_email, format_host_alert, format_mac_alert
+from email_utils import email_sender, alert_formatter
 from config import APP_CONFIG, DB_CONFIG, SERVER_CONFIG, LOG_CONFIG
 import logging
 
@@ -97,11 +97,21 @@ def store_scan_results():
                     host = Host(ip_address=host_ip)
                     host.first_seen = datetime.utcnow()
                     logging.info(f"Created new host record for: {host_ip}")
+                    
+                    # Send alert for new host
+                    alert_message = alert_formatter.format_host_alert(host)
+                    email_sender.send_alert(f"New Host Detected: {host_ip}", alert_message)
                 
                 # Update host information
+                old_status = host.status
                 host.status = nm[host_ip].state()
                 host.last_seen = datetime.utcnow()
                 logging.info(f"Updated host {host_ip} status: {host.status}")
+                
+                # Send alert if status changed
+                if old_status != host.status:
+                    alert_message = f"Host {host_ip} status changed from {old_status} to {host.status}"
+                    email_sender.send_alert("Host Status Change", alert_message)
                 
                 # Update hostname
                 try:
@@ -112,8 +122,19 @@ def store_scan_results():
                 
                 # Update MAC and vendor
                 if 'addresses' in nm[host_ip] and 'mac' in nm[host_ip]['addresses']:
+                    old_mac = host.mac_address
                     host.mac_address = nm[host_ip]['addresses']['mac']
                     logging.info(f"Host {host_ip} MAC: {host.mac_address}")
+                    
+                    # Send alert for new MAC address
+                    if host.mac_address not in known_macs:
+                        new_macs.add(host.mac_address)
+                        alert_message = alert_formatter.format_mac_alert(MACHistory(
+                            mac_address=host.mac_address,
+                            first_seen=datetime.utcnow(),
+                            last_seen=datetime.utcnow()
+                        ))
+                        email_sender.send_alert(f"New Device Detected: {host.mac_address}", alert_message)
                     
                     if host.mac_address in nm[host_ip]['vendor']:
                         vendor_name = nm[host_ip]['vendor'][host.mac_address]
@@ -140,9 +161,21 @@ def store_scan_results():
                                 protocol=protocol
                             )
                             logging.info(f"New port found for {host_ip}: {port_num}/{protocol}")
+                            
+                            # Send alert for new port
+                            alert_message = f"New port discovered on {host_ip}:\nPort: {port_num}/{protocol}\nState: {port_info.get('state')}"
+                            if port_info.get('name'):
+                                alert_message += f"\nService: {port_info.get('name')}"
+                            email_sender.send_alert(f"New Port Detected on {host_ip}", alert_message)
                         
+                        old_state = port.state
                         port.state = port_info.get('state')
                         logging.info(f"Port {port_num}/{protocol} state: {port.state}")
+                        
+                        # Send alert if port state changed
+                        if old_state != port.state:
+                            alert_message = f"Port {port_num}/{protocol} on {host_ip} state changed from {old_state} to {port.state}"
+                            email_sender.send_alert("Port Status Change", alert_message)
                         
                         # Create or get service
                         service = get_or_create_service(
@@ -240,6 +273,60 @@ def get_hosts():
     except Exception as e:
         logging.error(f"Error in get_hosts API: {str(e)}")
         return jsonify([])
+
+@app.route('/history')
+def history():
+    changes = ChangeHistory.query.order_by(ChangeHistory.timestamp.desc()).all()
+    return render_template('history.html', changes=changes)
+
+def send_change_notifications(changes):
+    """
+    Send email notifications for network changes.
+    
+    Args:
+        changes: List of ChangeHistory objects to notify about
+    """
+    if not changes:
+        return
+    
+    # Convert ChangeHistory objects to dictionaries for email notification
+    changes_data = []
+    for change in changes:
+        changes_data.append({
+            'host_id': change.host_id,
+            'host_ip': change.host.ip_address,
+            'timestamp': change.timestamp,
+            'change_type': change.change_type,
+            'details': change.details
+        })
+    
+    # Send email notification
+    if email_sender.send_change_notification(changes_data):
+        # Mark changes as notified
+        for change in changes:
+            change.notified = True
+        db.session.commit()
+        app.logger.info(f"Successfully sent notifications for {len(changes)} changes")
+    else:
+        app.logger.error("Failed to send change notifications")
+
+@app.route('/scan', methods=['POST'])
+def start_scan():
+    try:
+        # Start the scan
+        if scan_network_and_collect_data():
+            # Get changes from the scan
+            changes = update_host_and_ports_from_scan(nm, db.session)
+            
+            # Send notifications for the changes
+            send_change_notifications(changes)
+            
+            return jsonify({'status': 'success', 'message': 'Scan completed successfully'})
+        else:
+            return jsonify({'status': 'error', 'message': 'Scan failed to complete'})
+    except Exception as e:
+        app.logger.error(f"Error during scan: {str(e)}")
+        return jsonify({'status': 'error', 'message': str(e)})
 
 if __name__ == '__main__':
     # Start Flask app

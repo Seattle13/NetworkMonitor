@@ -1,6 +1,7 @@
 import nmap
 from config import APP_CONFIG
 import logging
+from database import db, update_host_and_ports_from_scan
 
 # Global PortScanner instance.
 # The python-nmap library often uses the instance to store and access scan results.
@@ -58,8 +59,13 @@ def scan_network_and_collect_data(network_cidr=None):
 
 if __name__ == "__main__":
     if scan_network_and_collect_data():
-        # display_collected_host_data()
-        pass
+        # Update database with scan results
+        try:
+            update_host_and_ports_from_scan(nm, db.session)
+            logging.info("Successfully updated database with scan results")
+        except Exception as e:
+            logging.error(f"Error updating database: {e}")
+            print("[!] Error updating database with scan results. Check logs for details.")
     else:
         print("[!] Scan could not be completed. Please check error messages and configurations.")
 
