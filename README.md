@@ -109,8 +109,6 @@ The system provides the following RESTful API endpoints:
 
 - `GET /api/hosts`: Retrieve all discovered hosts
 - `GET /api/hosts/<ip>`: Get details for a specific host
-- `GET /api/services`: List all discovered services
-- `GET /api/vendors`: List all detected vendors
 
 ## Security Considerations
 
