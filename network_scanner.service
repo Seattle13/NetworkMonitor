@@ -3,13 +3,19 @@ Description=Network Scanner Web Application
 After=network.target
 
 [Service]
-User=YOUR_USERNAME  # Replace with your username
-Group=YOUR_GROUP    # Replace with your group
-WorkingDirectory=/path/to/your/app  # Replace with your app directory
-Environment="PATH=/path/to/your/venv/bin"  # Replace with your virtual environment path
-ExecStart=/path/to/your/venv/bin/python wsgi.py
+Type=simple
+WorkingDirectory=/var/www/network-scanner
+Environment="PATH=/var/www/network-scanner/.venv/bin"
+ExecStart=/var/www/network-scanner/.venv/bin/python wsgi.py
 Restart=always
 RestartSec=5
+
+# Security hardening
+NoNewPrivileges=yes
+ProtectSystem=full
+ProtectHome=yes
+PrivateTmp=yes
+CapabilityBoundingSet=CAP_NET_RAW
 
 [Install]
 WantedBy=multi-user.target 

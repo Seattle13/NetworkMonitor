@@ -1,6 +1,6 @@
 # Network Scanner and Monitoring System
 
-A network monitoring solution that scans local Wi-Fi networks, collects device information, stores it in a structured database, and presents it through a web-based dashboard. The system includes real-time alerting capabilities for new device detection.
+A sophisticated network monitoring solution that scans local Wi-Fi networks, collects device information, stores it in a structured database, and presents it through a web-based dashboard. The system includes real-time alerting capabilities for new device detection.
 
 ## Features
 
@@ -24,8 +24,8 @@ A network monitoring solution that scans local Wi-Fi networks, collects device i
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/Seattle13/NetworkMonitor
-cd NetworkMonitor
+git clone <repository-url>
+cd network-scanner
 ```
 
 2. Create and activate a virtual environment:
@@ -44,11 +44,11 @@ pip install -r requirements.txt
 
 4. Configure the application:
    - Copy `config.py.example` to `config.py`
-   - Update the configuration settings in `.env`
+   - Update the configuration settings in `config.py`
 
 ## Configuration
 
-The system can be configured through `.env`. Key settings include:
+The system can be configured through `config.py`. Key settings include:
 
 - Network CIDR range to scan
 - Scan interval
@@ -70,7 +70,7 @@ python -c "from app import app, db; app.app_context().push(); db.create_all()"
 python app.py
 ```
 
-The dashboard will be available at `http://localhost:8080`
+The dashboard will be available at `http://localhost:5000`
 
 ### Running as a Service
 
@@ -135,9 +135,17 @@ Common issues and solutions:
    - Verify SMTP server settings
    - Check email credentials
 
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
+
 ## License
 
-This project is licensed under the MIT License.
+This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Acknowledgments
 

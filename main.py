@@ -1,5 +1,6 @@
 import nmap
 from config import APP_CONFIG
+import logging
 
 # Global PortScanner instance.
 # The python-nmap library often uses the instance to store and access scan results.
@@ -22,41 +23,36 @@ def scan_network_and_collect_data(network_cidr=None):
     if network_cidr is None:
         network_cidr = APP_CONFIG['network_cidr']
 
-    print(f"[*] Starting network scan on: {network_cidr}")
+    logging.info(f"Starting network scan on: {network_cidr}")
     print("[*] This process can take several minutes depending on the network size and scan intensity.")
     print("[*] Ensure Nmap is installed and you have necessary permissions for the chosen scan type.")
 
-    # --- Nmap Scan Arguments ---
-    # -sS: TCP SYN scan (stealthy, efficient, often requires root/admin privileges).
-    # -sV: Probe open ports to determine service/version info.
-    # -O: Enable OS detection (often requires root/admin privileges).
-    # -T4: Timing template (aggressive, for faster scans).
-    # --host-timeout 10m: Abort scanning a single host if it takes longer than 10 minutes.
-    #
-    # Common alternatives if -sS or -O cause permission issues:
-    #   arguments = '-sT -sV -T4 --host-timeout 5m' # TCP Connect scan (doesn't need root, but slower and more detectable)
-    #   arguments = '-T4 -F --open' # Fast scan of common ports, shows open ones (quicker, less info)
-    #   arguments = '-sn' # Ping scan (host discovery only, no port info - formerly -sP)
-    #
-    # For this initial script, we'll aim for a comprehensive scan.
-    # If issues arise, switch to simpler arguments.
-    scan_arguments = '-sS -sV -O -T4 --host-timeout 10m'
-    # scan_arguments = '-sT -sV -T4 --host-timeout 5m' # Fallback if no root access
+    # Using scan arguments that include MAC address detection
+    scan_arguments = '-sT -A -T4 --host-timeout 5m'  # Added -PR for MAC detection
 
     try:
-        # The scan method populates the 'nm' instance with results.
-        print(f"[*] Executing Nmap with arguments: {scan_arguments}")
+        logging.info(f"Executing Nmap with arguments: {scan_arguments}")
         nm.scan(hosts=network_cidr, arguments=scan_arguments)
-        print("[+] Nmap scan command executed. Results are being processed by python-nmap.")
+        
+        # Log scan results
+        hosts = nm.all_hosts()
+        logging.info(f"Scan completed. Found {len(hosts)} hosts")
+        for host in hosts:
+            logging.info(f"Host {host}: {nm[host].state()}")
+            if 'addresses' in nm[host]:
+                logging.info(f"MAC: {nm[host]['addresses'].get('mac', 'N/A')}")
+            if 'osmatch' in nm[host]:
+                logging.info(f"OS: {nm[host]['osmatch'][0]['name'] if nm[host]['osmatch'] else 'N/A'}")
+        
         return True
     except nmap.PortScannerError as e:
-        print(f"[!] Nmap Execution Error: {e}")
+        logging.error(f"Nmap Execution Error: {e}")
         print("[!] Please ensure Nmap is installed and in your system's PATH.")
         print(
             "[!] For scan types like -sS (TCP SYN) or -O (OS Detection), you might need to run this script with sudo/administrator privileges.")
         return False
     except Exception as e:
-        print(f"[!] An unexpected error occurred during Nmap scan initiation: {e}")
+        logging.error(f"Unexpected error during scan: {e}")
         return False
 
 
